@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Set up Google Gemini API key
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Load from system environment
+GEMINI_API_KEY ='AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w'
 genai.configure(api_key=GEMINI_API_KEY)
 
 @dataclass
@@ -65,10 +65,27 @@ class PhishingDetector:
 
     def get_risk_level(self, warnings: List[WarningMessage]) -> str:
         """
-        Determine overall risk level based solely on AI-generated warnings.
-        If there is any warning, mark as 'risky'; otherwise, 'none'.
+        Determine overall risk level based on AI-generated warnings.
+        If the AI's analysis suggests the email is safe, return "none"; otherwise, return "risky".
         """
-        return "risky" if warnings else "none"
+        if not warnings:
+            return "none"
+
+        # Use the details from the first warning to determine risk.
+        warning_text = warnings[0].details.lower()
+        if "safe" in warning_text or "not phishing" in warning_text:
+            return "none"
+        else:
+            return "risky"
+        if not warnings:
+            return "none"
+
+        # Use the details from the first warning to determine risk.
+        warning_text = warnings[0].details.lower()
+        if "safe" in warning_text or "not phishing" in warning_text:
+            return "none"
+        else:
+            return "risky"
 
 class EmailAnalysis:
     def __init__(self, email_id: str, content: str, sender: str = ""):
@@ -145,5 +162,5 @@ def detect_phishing():
         return jsonify({"error": "Invalid payload structure"}), 400
 
 if __name__ == "__main__":
-    print("Starting Flask server on port 5002...")
+    print("\nStarting Flask server on port 5002...\n")
     app.run(debug=True, host="0.0.0.0", port=5002)

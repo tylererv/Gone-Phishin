@@ -88,7 +88,7 @@ function extractEmailData(emailElement) {
     const button = document.createElement("button");
     button.innerText = "Scan This Email for Phishing";
     button.style.position = "fixed";
-    button.style.bottom = "20px";
+    button.style.bottom = "50px";
     button.style.right = "20px";
     button.style.zIndex = "10001";
     button.style.padding = "10px 20px";
