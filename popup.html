@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Phishing Eail Detector</title>
+  <title>Phishing Email Detector</title>
   <style>
     body {
       width: 250px;
@@ -18,28 +18,14 @@
       margin-bottom: 12px;
       font-weight: 600;
     }
-    button {
-      width: 100%;
-      padding: 10px 16px;
-      background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    .counter {
+      background-color: #dc3545;
       color: white;
-      border: none;
+      padding: 8px 16px;
       border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
-      transition: all 0.3s ease;
-    }
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
-      background: linear-gradient(135deg, #0b5ed7 0%, #0d6efd 100%);
-    }
-    button:active {
-      transform: translateY(0);
+      margin-top: 12px;
     }
     #status {
       margin-top: 12px;
@@ -53,8 +39,8 @@
 <body>
   <div class="container">
     <div class="title">Phishing Email Detector</div>
-    <button id="filterButton">Scan for Phishing Emails</button>
-    <div id="status"></div>
+    <div class="counter">Detected: <span id="phishingCount">0</span></div>
+    <div id="status">Scanning emails automatically...</div>
   </div>
   <script src="popup.js"></script>
 </body>

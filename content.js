@@ -1,116 +1,254 @@
-// Function to extract email content and sender from Gmail's DOM.
-// Adjust selectors based on Gmail's current structure.
-function extractEmailData(emailElement) {
-  const content = emailElement.innerText;
-  const senderElement = emailElement.querySelector('.gD');
-  const sender = senderElement ? senderElement.getAttribute('email') : '';
-  const emailId = emailElement.getAttribute('data-message-id') || Date.now().toString();
-  return { id: emailId, content, sender };
-}
+// Phishing detection patterns
+const PHISHING_PATTERNS = {
+    urgentAction: /(urgent|immediate|action required|account suspended|verify account)/i,
+    suspiciousLinks: /(bit\.ly|goo\.gl|tinyurl\.com|click here)/i,
+    suspiciousSender: /(noreply|support@|account@|security@)/i,
+    poorGrammar: /(dear valued customer|dear user|dear account holder)/i
+};
 
-// Function to send a single email for phishing analysis via AI.
-function analyzeEmail(emailData) {
-  return fetch("http://127.0.0.1:5002/api/detect-phishing", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: emailData })
-  })
-    .then(response => response.json())
-    .catch(err => {
-      console.error("Error calling phishing detection API:", err);
-      return null;
-    });
-}
-
-// Map the risk level to a verdict string.
-function getVerdict(riskLevel) {
-  if (riskLevel === "risky" || riskLevel === "high") {
-    return "Scam";
-  } else if (riskLevel === "unsure" || riskLevel === "medium") {
-    return "Unsure";
-  } else if (riskLevel === "none") {
-    return "Legit";
-  }
-  return "Unsure";
-}
-
-// Function to display the analysis result in a centered, transparent popup that fits the text.
-function displayResult(result) {
-  let popup = document.getElementById("phishingPopup");
-  if (!popup) {
-    popup = document.createElement("div");
-    popup.id = "phishingPopup";
-    // Centered popup styling
-    popup.style.position = "fixed";
-    popup.style.top = "50%";
-    popup.style.left = "50%";
-    popup.style.transform = "translate(-50%, -50%)";
-    popup.style.backgroundColor = "rgba(0, 0, 0, 0.7)"; // semi-transparent black
-    popup.style.padding = "20px";
-    popup.style.borderRadius = "8px";
-    popup.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
-    popup.style.maxWidth = "80%";
-    popup.style.zIndex = "10000";
-    popup.style.color = "white";
-    document.body.appendChild(popup);
-  }
-
-  // Determine verdict from risk_level.
-  const verdict = getVerdict(result.risk_level);
-
-  // Build the popup content with a clear line break between title and details.
-  popup.innerHTML = `<h2>Phishing Detection Result: ${verdict}</h2><br>`;
-  
-  // Display the risk summary (assumed to be in the details of the first warning) as a flowing sentence.
-  if (result && result.warnings && result.warnings.length > 0 && result.warnings[0].details) {
-    popup.innerHTML += `<p>${result.warnings[0].details}</p>`;
-  } else {
-    popup.innerHTML += `<p>The email appears safe.</p>`;
-  }
-  
-  // Add a close button.
-  const closeButton = document.createElement("button");
-  closeButton.innerText = "Close";
-  closeButton.style.marginTop = "20px";
-  closeButton.style.padding = "10px 20px";
-  closeButton.style.backgroundColor = "#dc004e";
-  closeButton.style.color = "white";
-  closeButton.style.border = "none";
-  closeButton.style.borderRadius = "5px";
-  closeButton.style.cursor = "pointer";
-  closeButton.addEventListener("click", () => popup.remove());
-  popup.appendChild(closeButton);
-}
-
-// Example: Add a button to Gmail for scanning the currently open email.
-function addScanButton() {
-  const button = document.createElement("button");
-  button.innerText = "Scan This Email";
-  button.style.position = "fixed";
-  button.style.bottom = "50px";
-  button.style.right = "20px";
-  button.style.zIndex = "10001";
-  button.style.padding = "10px 20px";
-  button.style.backgroundColor = "#1976d2";
-  button.style.color = "white";
-  button.style.border = "none";
-  button.style.borderRadius = "5px";
-  button.style.cursor = "pointer";
-  button.addEventListener("click", () => {
-    // Find the currently open email container in Gmail (adjust selector as needed)
-    const emailElement = document.querySelector(".ii.gt");
-    if (!emailElement) {
-      alert("No open email found. Please open an email.");
-      return;
+// Warning messages for each pattern
+const WARNING_MESSAGES = {
+    urgentAction: {
+        title: 'Urgent Action Required',
+        details: 'This email contains urgent or threatening language, which is a common phishing tactic.'
+    },
+    suspiciousLinks: {
+        title: 'Suspicious Links Detected',
+        details: 'Contains shortened URLs or generic "click here" links, which may hide malicious destinations.'
+    },
+    suspiciousSender: {
+        title: 'Suspicious Sender Pattern',
+        details: 'The sender address matches common phishing patterns (noreply, support, account, security).'
+    },
+    poorGrammar: {
+        title: 'Generic or Suspicious Greeting',
+        details: 'Uses generic greetings or poor grammar, which are common in phishing attempts.'
     }
-    const emailData = extractEmailData(emailElement);
-    analyzeEmail(emailData).then(result => {
-      displayResult(result);
-    });
-  });
-  document.body.appendChild(button);
+};
+
+// Store phishing email IDs and their warnings
+let phishingEmails = new Map();
+
+// Function to analyze email content for phishing indicators
+function analyzeEmail(emailElement) {
+    const emailContent = emailElement.textContent;
+    const warnings = [];
+
+    // Check for urgent action requests
+    if (PHISHING_PATTERNS.urgentAction.test(emailContent)) {
+        warnings.push('urgentAction');
+    }
+
+    // Check for suspicious links
+    if (PHISHING_PATTERNS.suspiciousLinks.test(emailContent)) {
+        warnings.push('suspiciousLinks');
+    }
+
+    // Check for suspicious sender patterns
+    if (PHISHING_PATTERNS.suspiciousSender.test(emailContent)) {
+        warnings.push('suspiciousSender');
+    }
+
+    // Check for poor grammar or generic greetings
+    if (PHISHING_PATTERNS.poorGrammar.test(emailContent)) {
+        warnings.push('poorGrammar');
+    }
+
+    return warnings;
 }
 
-// Initialize extension functionality.
-addScanButton();
-  
+// Function to toggle warning details
+function toggleWarningDetails(warningDiv) {
+    const contentDiv = warningDiv.querySelector('.warning-content');
+    const isExpanded = contentDiv.classList.contains('expanded');
+    
+    // Toggle the expanded class
+    contentDiv.classList.toggle('expanded');
+    
+    // If we're expanding, ensure the content is visible before animating
+    if (!isExpanded) {
+        contentDiv.style.display = 'block';
+        // Force a reflow
+        contentDiv.offsetHeight;
+        contentDiv.classList.add('expanded');
+    } else {
+        // If we're collapsing, wait for the animation to complete
+        contentDiv.addEventListener('transitionend', function handler() {
+            contentDiv.style.display = 'none';
+            contentDiv.removeEventListener('transitionend', handler);
+        }, { once: true });
+    }
+}
+
+// Function to add warning label to email
+function addWarningLabel(emailElement, warnings) {
+    if (warnings.length > 0) {
+        const warningDiv = document.createElement('div');
+        warningDiv.className = 'phishing-warning';
+        
+        // Create warning messages
+        const warningMessages = warnings.map(warning => WARNING_MESSAGES[warning]);
+        
+        warningDiv.innerHTML = `
+            <div class="warning-icon">⚠️</div>
+            <div class="warning-content">
+                <div class="warning-text">
+                    <strong>Potential Phishing Email</strong>
+                    <div class="warning-details">
+                        ${warningMessages.map(msg => `
+                            <div>• ${msg.title}: ${msg.details}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        emailElement.insertBefore(warningDiv, emailElement.firstChild);
+        
+        // Store the email ID and warnings
+        const emailId = emailElement.getAttribute('data-message-id') || Date.now().toString();
+        emailElement.setAttribute('data-message-id', emailId);
+        phishingEmails.set(emailId, warnings);
+    }
+}
+
+// Function to update phishing count display
+function updatePhishingCount() {
+    let counterDisplay = document.getElementById('phishing-counter');
+    if (!counterDisplay) {
+        counterDisplay = document.createElement('div');
+        counterDisplay.id = 'phishing-counter';
+        counterDisplay.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 9999;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(counterDisplay);
+    }
+    counterDisplay.textContent = `Phishing Emails Detected: ${phishingEmails.size}`;
+}
+
+// Function to scan all visible emails
+function scanAllEmails() {
+    const emailElements = document.querySelectorAll('.zA');
+    let newPhishingCount = 0;
+
+    emailElements.forEach((emailElement) => {
+        const emailId = emailElement.getAttribute('data-message-id');
+        if (!emailId || !phishingEmails.has(emailId)) {
+            const warnings = analyzeEmail(emailElement);
+            if (warnings.length > 0) {
+                addWarningLabel(emailElement, warnings);
+                newPhishingCount++;
+            }
+        }
+    });
+
+    if (newPhishingCount > 0) {
+        updatePhishingCount();
+        // Notify popup of the update
+        chrome.runtime.sendMessage({
+            type: 'PHISHING_COUNT_UPDATE',
+            count: phishingEmails.size
+        });
+    }
+
+    return newPhishingCount;
+}
+
+// Function to remove phishing email from tracking
+function removePhishingEmail(emailElement) {
+    const emailId = emailElement.getAttribute('data-message-id');
+    if (emailId && phishingEmails.has(emailId)) {
+        phishingEmails.delete(emailId);
+        const warningDiv = emailElement.querySelector('.phishing-warning');
+        if (warningDiv) {
+            warningDiv.remove();
+        }
+    }
+}
+
+// Observer to watch for email actions
+const emailObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('zA')) {
+                removePhishingEmail(node);
+            }
+        });
+    });
+});
+
+// Start observing the Gmail inbox for email actions
+const inboxContainer = document.querySelector('.AO');
+if (inboxContainer) {
+    emailObserver.observe(inboxContainer, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'GET_COUNT') {
+        sendResponse({ 
+            success: true, 
+            count: phishingEmails.size
+        });
+    }
+    return true;
+});
+
+// Handle email open events
+document.addEventListener('click', (event) => {
+    const emailElement = event.target.closest('.zA');
+    if (emailElement) {
+        const emailId = emailElement.getAttribute('data-message-id');
+        if (emailId && phishingEmails.has(emailId)) {
+            // Remove the warning when email is opened
+            removePhishingEmail(emailElement);
+        }
+    }
+});
+
+// Start automatic scanning
+function startAutoScan() {
+    // Initial scan
+    scanAllEmails();
+    
+    // Set up periodic scanning
+    setInterval(scanAllEmails, 5000);
+    
+    // Set up observer for new emails
+    const inboxObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length > 0) {
+                scanAllEmails();
+            }
+        });
+    });
+
+    // Start observing the inbox for new emails
+    const inboxContainer = document.querySelector('.AO');
+    if (inboxContainer) {
+        inboxObserver.observe(inboxContainer, {
+            childList: true,
+            subtree: true
+        });
+    }
+}
+
+// Start the automatic scanning when the page loads
+if (document.readyState === 'complete') {
+    startAutoScan();
+} else {
+    window.addEventListener('load', startAutoScan);
+} 

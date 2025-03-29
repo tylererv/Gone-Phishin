@@ -44,4 +44,29 @@ document.getElementById('filterButton').addEventListener('click', async () => {
     console.error('Error:', error);
     statusDiv.textContent = 'Error: Please refresh Gmail and try again';
   }
+});
+
+// Update phishing count when popup opens
+chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+  const tab = tabs[0];
+  if (tab.url.includes('mail.google.com')) {
+    try {
+      // Get the current phishing count from the content script
+      chrome.tabs.sendMessage(tab.id, { action: 'GET_COUNT' }, (response) => {
+        if (response && response.success) {
+          document.getElementById('phishingCount').textContent = response.count;
+        }
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+});
+
+// Listen for updates from content script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'PHISHING_COUNT_UPDATE') {
+    document.getElementById('phishingCount').textContent = request.count;
+  }
+  return true;
 }); 
