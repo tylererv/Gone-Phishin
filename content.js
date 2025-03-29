@@ -15,26 +15,37 @@ function extractEmailData(emailElement) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: emailData })
     })
-    .then(response => response.json())
-    .catch(err => {
-      console.error("Error calling phishing detection API:", err);
-      return null;
-    });
+      .then(response => response.json())
+      .catch(err => {
+        console.error("Error calling phishing detection API:", err);
+        return null;
+      });
   }
   
-  // Function to display the analysis result in a centered, transparent popup.
+  // Map the risk level to a verdict string.
+  function getVerdict(riskLevel) {
+    if (riskLevel === "risky" || riskLevel === "high") {
+      return "Scam";
+    } else if (riskLevel === "medium") {
+      return "Unsure";
+    } else if (riskLevel === "none") {
+      return "Legit";
+    }
+    return "Unsure";
+  }
+  
+  // Function to display the analysis result in a centered, transparent popup that fits the text.
   function displayResult(result) {
-    // Create a floating popup container
     let popup = document.getElementById("phishingPopup");
     if (!popup) {
       popup = document.createElement("div");
       popup.id = "phishingPopup";
-      // Style the popup to be centered and sized to fit its text
+      // Centered popup styling
       popup.style.position = "fixed";
       popup.style.top = "50%";
       popup.style.left = "50%";
       popup.style.transform = "translate(-50%, -50%)";
-      popup.style.backgroundColor = "rgba(0, 0, 0, 0.6)"; // semi-transparent black
+      popup.style.backgroundColor = "rgba(0, 0, 0, 0.7)"; // semi-transparent black
       popup.style.padding = "20px";
       popup.style.borderRadius = "8px";
       popup.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
@@ -44,11 +55,16 @@ function extractEmailData(emailElement) {
       document.body.appendChild(popup);
     }
     
-    // Build the popup content
-    popup.innerHTML = `<h2>Phishing Detection Result</h2>`;
-    if (result && result.risk_level && result.risk_level !== "none") {
-      // Display the AI's risk summary (we assume it's in the details of the first warning)
-      popup.innerHTML += `<p><strong>Risk Summary:</strong> ${result.warnings[0].details}</p>`;
+    // Determine verdict from risk_level
+    const verdict = getVerdict(result.risk_level);
+  
+    // Build the popup content. Add a line break after the title.
+    popup.innerHTML = `<h2>Phishing Detection Result: ${verdict}</h2><br>`;
+    
+    // Display the risk summary (assumed to be in the details of the first warning)
+    if (result && result.warnings && result.warnings.length > 0 && result.warnings[0].details) {
+      // Display the AI's risk summary as a flowing sentence.
+      popup.innerHTML += `<p>${result.warnings[0].details}</p>`;
     } else {
       popup.innerHTML += `<p>The email appears safe.</p>`;
     }
@@ -72,7 +88,7 @@ function extractEmailData(emailElement) {
     const button = document.createElement("button");
     button.innerText = "Scan This Email for Phishing";
     button.style.position = "fixed";
-    button.style.bottom = "50px";
+    button.style.bottom = "20px";
     button.style.right = "20px";
     button.style.zIndex = "10001";
     button.style.padding = "10px 20px";
