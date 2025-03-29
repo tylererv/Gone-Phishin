@@ -10,18 +10,16 @@ from flask_cors import CORS
 # Set up Google Gemini API key
 GEMINI_API_KEY = "AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w"  # Replace with your actual API key
 genai.configure(api_key=GEMINI_API_KEY)
-# Note: We can set a default model here if desired, but we override it in the AI function.
-# model = genai.GenerativeModel('gemini-2.0-flash')
+# Note: The default model can be set here if desired.
 
 @dataclass
 class WarningMessage:
     title: str
     details: str
-    severity: str = "medium"
 
 class PhishingDetector:
     def __init__(self):
-        # We rely exclusively on AI analysis in this version.
+        # No rule-based patterns; rely exclusively on AI.
         pass
 
     def analyze_email(self, content: str, sender: str = "") -> List[WarningMessage]:
@@ -37,8 +35,8 @@ class PhishingDetector:
     def analyze_with_gemini(self, content: str, sender: str) -> WarningMessage:
         """
         Uses the Google Gemini API to analyze the email content and sender.
-        The AI is instructed to focus on linguistic cues and contextual information,
-        and return a structured response indicating whether the email is phishing.
+        The AI is instructed to focus on overall context, linguistic cues, and sender details,
+        and return a concise risk summary in about two sentences.
         """
         try:
             # Use a specific model (e.g., gemini-2.0-flash) for the analysis.
@@ -46,26 +44,21 @@ class PhishingDetector:
             prompt = f"""
             You are a cybersecurity AI expert. Analyze the following email and determine if it is a phishing attempt or if it is safe.
             Do not rely on simple rule-based logic; instead, consider the overall context, linguistic cues, and sender details.
+            Answer in 3 sentences or less.
 
             Email Sender: {sender}
             Email Content: {content}
 
             Provide your analysis strictly in the following format:
             - Title: (Short title summarizing your analysis)
-            - Details: (A detailed but short explanation of your findings)
-            - Severity: (low, medium, high)
+            - Details: (A detailed explanation of your findings)
             """
+
             response = model.generate_content(prompt)
-            ai_result = response.text  # The full AI response text
-
-            # Determine severity from AI result by searching for keywords.
-            severity = "low"
-            if "high" in ai_result.lower():
-                severity = "high"
-            elif "medium" in ai_result.lower():
-                severity = "medium"
-
-            return WarningMessage("AI Phishing Analysis", ai_result, severity)
+            ai_result = response.text.strip()  # The full AI response text, stripped of extra whitespace
+            
+            # Return a WarningMessage with a fixed title and the AI summary as details.
+            return WarningMessage("AI Risk Summary", ai_result)
 
         except Exception as e:
             print(f"Error analyzing email with AI: {e}")
@@ -74,21 +67,9 @@ class PhishingDetector:
     def get_risk_level(self, warnings: List[WarningMessage]) -> str:
         """
         Determine overall risk level based solely on AI-generated warnings.
+        If there is any warning, mark as 'risky'; otherwise, 'none'.
         """
-        if not warnings:
-            return "none"
-
-        severity_counts = {"high": 0, "medium": 0, "low": 0}
-        for warning in warnings:
-            severity_counts[warning.severity] += 1
-
-        if severity_counts["high"] > 0:
-            return "high"
-        elif severity_counts["medium"] >= 1:
-            return "medium"
-        elif severity_counts["low"] > 0:
-            return "low"
-        return "none"
+        return "risky" if warnings else "none"
 
 class EmailAnalysis:
     def __init__(self, email_id: str, content: str, sender: str = ""):
@@ -112,8 +93,7 @@ class EmailAnalysis:
             "warnings": [
                 {
                     "title": warning.title,
-                    "details": warning.details,
-                    "severity": warning.severity
+                    "details": warning.details
                 }
                 for warning in self.warnings
             ]
@@ -134,19 +114,18 @@ def analyze_emails(emails: List[Dict[str, str]]) -> List[Dict]:
         results.append(analysis.to_dict())
     return results
 
-# --- Flask App Setup ---
+# Flask App Setup
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing
+CORS(app)  # Enable CORS so that the Chrome extension can access this API
 
 @app.route('/api/detect-phishing', methods=['POST'])
 def detect_phishing():
     """
-    API endpoint to analyze one or more emails for phishing.
-    Expected JSON payload:
-    Either:
-    { "emails": [ { "id": ..., "content": ..., "sender": ... }, ... ] }
-    or for a single email:
-    { "email": { "id": ..., "content": ..., "sender": ... } }
+    API endpoint that analyzes one or more emails for phishing.
+    Accepts JSON payload:
+      - Either: { "emails": [ { "id": ..., "content": ..., "sender": ... }, ... ] }
+      - Or: { "email": { "id": ..., "content": ..., "sender": ... } }
+    Returns analysis results in JSON format.
     """
     data = request.get_json()
     if not data:
@@ -167,6 +146,5 @@ def detect_phishing():
         return jsonify({"error": "Invalid payload structure"}), 400
 
 if __name__ == "__main__":
-    # Run the Flask server on port 5002
     print("Starting Flask server on port 5002...")
     app.run(debug=True, host="0.0.0.0", port=5002)

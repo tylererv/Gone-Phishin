@@ -1,5 +1,5 @@
 // Function to extract email content and sender from Gmail's DOM.
-// Adjust selectors based on Gmail's structure.
+// Adjust selectors based on Gmail's current structure.
 function extractEmailData(emailElement) {
     const content = emailElement.innerText;
     const senderElement = emailElement.querySelector('.gD');
@@ -8,13 +8,11 @@ function extractEmailData(emailElement) {
     return { id: emailId, content, sender };
   }
   
-  // Function to send a single email for phishing detection
+  // Function to send a single email for phishing analysis via AI.
   function analyzeEmail(emailData) {
     return fetch("http://127.0.0.1:5002/api/detect-phishing", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: emailData })
     })
     .then(response => response.json())
@@ -24,37 +22,37 @@ function extractEmailData(emailElement) {
     });
   }
   
-  // Function to display the analysis result as an overlay on Gmail
+  // Function to display the analysis result in a centered, transparent popup.
   function displayResult(result) {
-    let overlay = document.getElementById("phishingOverlay");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "phishingOverlay";
-      overlay.style.position = "fixed";
-      overlay.style.top = "0";
-      overlay.style.left = "0";
-      overlay.style.width = "100%";
-      overlay.style.height = "100%";
-      overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
-      overlay.style.color = "white";
-      overlay.style.zIndex = "10000";
-      overlay.style.padding = "20px";
-      overlay.style.overflowY = "auto";
-      document.body.appendChild(overlay);
+    // Create a floating popup container
+    let popup = document.getElementById("phishingPopup");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.id = "phishingPopup";
+      // Style the popup to be centered and sized to fit its text
+      popup.style.position = "fixed";
+      popup.style.top = "50%";
+      popup.style.left = "50%";
+      popup.style.transform = "translate(-50%, -50%)";
+      popup.style.backgroundColor = "rgba(0, 0, 0, 0.6)"; // semi-transparent black
+      popup.style.padding = "20px";
+      popup.style.borderRadius = "8px";
+      popup.style.boxShadow = "0 0 10px rgba(0,0,0,0.5)";
+      popup.style.maxWidth = "80%";
+      popup.style.zIndex = "10000";
+      popup.style.color = "white";
+      document.body.appendChild(popup);
     }
-    // Build the overlay content
-    overlay.innerHTML = `<h2>Phishing Detection Result</h2>`;
-    if (result && result.risk_level) {
-      overlay.innerHTML += `<p><strong>Risk Level:</strong> ${result.risk_level}</p>`;
-      if (result.warnings && result.warnings.length > 0) {
-        overlay.innerHTML += `<h3>Warnings:</h3>`;
-        result.warnings.forEach(warning => {
-          overlay.innerHTML += `<p><strong>${warning.title}:</strong> ${warning.details}</p>`;
-        });
-      }
+    
+    // Build the popup content
+    popup.innerHTML = `<h2>Phishing Detection Result</h2>`;
+    if (result && result.risk_level && result.risk_level !== "none") {
+      // Display the AI's risk summary (we assume it's in the details of the first warning)
+      popup.innerHTML += `<p><strong>Risk Summary:</strong> ${result.warnings[0].details}</p>`;
     } else {
-      overlay.innerHTML += `<p>Error: No valid result received.</p>`;
+      popup.innerHTML += `<p>The email appears safe.</p>`;
     }
+    
     // Add a close button
     const closeButton = document.createElement("button");
     closeButton.innerText = "Close";
@@ -64,16 +62,17 @@ function extractEmailData(emailElement) {
     closeButton.style.color = "white";
     closeButton.style.border = "none";
     closeButton.style.borderRadius = "5px";
-    closeButton.addEventListener("click", () => overlay.remove());
-    overlay.appendChild(closeButton);
+    closeButton.style.cursor = "pointer";
+    closeButton.addEventListener("click", () => popup.remove());
+    popup.appendChild(closeButton);
   }
   
-  // Example: Add a button to Gmail for scanning the currently selected/opened email
+  // Example: Add a button to Gmail for scanning the currently open email.
   function addScanButton() {
     const button = document.createElement("button");
     button.innerText = "Scan This Email for Phishing";
     button.style.position = "fixed";
-    button.style.bottom = "20px";
+    button.style.bottom = "50px";
     button.style.right = "20px";
     button.style.zIndex = "10001";
     button.style.padding = "10px 20px";
@@ -97,6 +96,6 @@ function extractEmailData(emailElement) {
     document.body.appendChild(button);
   }
   
-  // Initialize extension functionality
+  // Initialize extension functionality.
   addScanButton();
   
