@@ -1,0 +1,7 @@
+pip install flask flask-cors google-generativeai
+
+# Windows
+set GEMINI_API_KEY=your_api_key_here
+
+# Linux / MacOS
+export GEMINI_API_KEY=your_api_key_here

@@ -8,9 +8,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Set up Google Gemini API key
-GEMINI_API_KEY = "AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w"  # Replace with your actual API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Load from system environment
 genai.configure(api_key=GEMINI_API_KEY)
-# Note: The default model can be set here if desired.
 
 @dataclass
 class WarningMessage:
