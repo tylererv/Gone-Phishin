@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Set up Google Gemini API key
-GEMINI_API_KEY ='AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w'
+GEMINI_API_KEY ='AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w'  # Replace with your actual API key
 genai.configure(api_key=GEMINI_API_KEY)
 
 @dataclass
@@ -18,13 +18,12 @@ class WarningMessage:
 
 class PhishingDetector:
     def __init__(self):
-        # No rule-based patterns; rely exclusively on AI.
+        # Rely exclusively on AI.
         pass
 
     def analyze_email(self, content: str, sender: str = "") -> List[WarningMessage]:
         """
         Analyze email content using Google Gemini AI to determine if it's a phishing attempt.
-        This function does not use simple regex-based logic.
         """
         ai_warning = self.analyze_with_gemini(content, sender)
         if ai_warning:
@@ -35,28 +34,28 @@ class PhishingDetector:
         """
         Uses the Google Gemini API to analyze the email content and sender.
         The AI is instructed to focus on overall context, linguistic cues, and sender details,
-        and return a concise risk summary in about two sentences.
+        and return a concise risk summary in about 3 sentences.
         """
         try:
-            # Use a specific model (e.g., gemini-2.0-flash) for the analysis.
+            # Use the gemini-2.0-flash model for the analysis.
             model = genai.GenerativeModel("gemini-2.0-flash")
             prompt = f"""
             You are a cybersecurity AI expert. Analyze the following email and determine if it is a phishing attempt or if it is safe.
-            Do not rely on simple rule-based logic; instead, consider the overall context, linguistic cues, and sender details.
+            Consider the overall context, linguistic cues, and sender details, and think logically about the situation.
             Answer in 3 sentences or less.
 
             Email Sender: {sender}
             Email Content: {content}
 
             Provide your analysis strictly in the following format:
-            - Title: (Short title summarizing your analysis)
-            - Details: (A detailed explanation of your findings)
-            """
+            Title: (Short title summarizing your analysis)
 
+            Details: (A detailed explanation of your findings)
+            """
             response = model.generate_content(prompt)
-            ai_result = response.text.strip()  # The full AI response text, stripped of extra whitespace
-            
-            # Return a WarningMessage with a fixed title and the AI summary as details.
+            ai_result = response.text.strip()  # Full AI response
+
+            # Return the AI summary as a WarningMessage.
             return WarningMessage("AI Risk Summary", ai_result)
 
         except Exception as e:
@@ -65,27 +64,22 @@ class PhishingDetector:
 
     def get_risk_level(self, warnings: List[WarningMessage]) -> str:
         """
-        Determine overall risk level based on AI-generated warnings.
-        If the AI's analysis suggests the email is safe, return "none"; otherwise, return "risky".
+        Determine overall risk level based solely on the AI-generated warning.
+        Checks the AI's details for keywords:
+          - If it indicates the email is safe, return "none".
+          - If it indicates a phishing attempt, return "risky".
+          - Otherwise, return "unsure".
         """
         if not warnings:
             return "none"
 
-        # Use the details from the first warning to determine risk.
         warning_text = warnings[0].details.lower()
         if "safe" in warning_text or "not phishing" in warning_text:
             return "none"
-        else:
+        elif "phishing" in warning_text or "scam" in warning_text or "malicious" in warning_text:
             return "risky"
-        if not warnings:
-            return "none"
-
-        # Use the details from the first warning to determine risk.
-        warning_text = warnings[0].details.lower()
-        if "safe" in warning_text or "not phishing" in warning_text:
-            return "none"
         else:
-            return "risky"
+            return "unsure"
 
 class EmailAnalysis:
     def __init__(self, email_id: str, content: str, sender: str = ""):
