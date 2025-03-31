@@ -1,8 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Phishing Email Detector",
+  "name": "Gone Phishin Highlighter",
   "version": "1.0",
-  "description": "Detects and labels potential phishing emails in Gmail",
+  "description": "Highlights potential phishing emails in Gmail",
+  "icons": {
+    "200":"Logo/GoPhisingLogo copy.png",
+    "300":"Logo/GoPhisingLogo copy 2.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
   "permissions": [
     "activeTab",
     "storage",
@@ -15,9 +22,7 @@
   "action": {
     "default_popup": "popup.html"
   },
-  "background": {
-    "service_worker": "background.js"
-  },
+  
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
