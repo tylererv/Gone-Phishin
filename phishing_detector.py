@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Set up Google Gemini API key
-GEMINI_API_KEY ='AIzaSyDzs-Y16BZAoNU2s1pXCb1xh-NvBYNal-w'  # Replace with your actual API key
+GEMINI_API_KEY ='REPLACE'  # Replace with your actual API key
 genai.configure(api_key=GEMINI_API_KEY)
 
 @dataclass
@@ -37,7 +37,7 @@ class PhishingDetector:
         and return a concise risk summary in about 3 sentences.
         """
         try:
-            # Use the gemini-2.0-flash model for the analysis.
+            # Use the gemini-2.0-flash model for the analysis or replace with desired model.
             model = genai.GenerativeModel("gemini-2.0-flash")
             prompt = f"""
             You are a cybersecurity AI expert. Analyze the following email and determine if it is a phishing attempt or if it is safe.
