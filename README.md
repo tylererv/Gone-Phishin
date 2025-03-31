@@ -1,5 +1,7 @@
-# **Gone Phishin**
-FOR ADDITIONAL SCAM EMAIL HIGHLIGHER EXTENSION DOWNLOAD **EVANGOLD** BRANCH SEPERATLY AND FOLLOW ALONG FROM STEP 5.
+# **Gone Phishin Extension**
+FOR ADDITIONAL SCAM EMAIL HIGHLIGHER EXTENSION DOWNLOAD **EVANGOLD** BRANCH SEPERATLY AND FOLLOW ALONG FROM STEP 5.  
+THERE WILL BE 2 DIFFERENT EXTENSIONS IF YOU DO THIS.  
+  
 1. Make sure to install all dependencies in requirements.txt  
 2. Also a **Google Gemini AI API key will be needed**.  
 3. When you get that replace the string REPLACE on line 11 of phishing_detector.py with your key and update the model if desired on line 41.  
